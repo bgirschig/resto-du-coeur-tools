@@ -1,32 +1,35 @@
 import fitz
 import os
-import glob
-import sys
+import argparse
+import pathlib
 
 current_filename = None
 
 def main():
-    if (len(sys.argv) > 1):
-        patterns = sys.argv[1:]
-        for pattern in patterns:
-            redact_files(pattern)
-    else:
-        print("missing argument: which files would you like to redact ?")
+    parser = argparse.ArgumentParser(
+        prog="Redactor",
+        description="Redact pdf payslips",
+        usage="python main.py --input ~/Downloads/*.pdf --output ~/Downloads/redacted"
+    )
+    parser.add_argument("--input", nargs='+', help="input file(s) to be redacted")
+    parser.add_argument("--output", help="path to the directory where the files will be saved")
+    parser.add_argument("--suffix", default="_redacted", help="adds a suffix to the end of the generated filenames")
+    args = parser.parse_args()
 
-def redact_files(pattern:str):
-    files = glob.glob(pattern)
-    for file in files:
-        redact_file(file)
+    for file in args.input:
+        redact_file(file, args.output, args.suffix)
 
-def redact_file(path:str):
+def redact_file(path:str, output_dir:str, filename_suffix:str=""):
     global current_filename
     current_filename = os.path.basename(path)
 
     doc = fitz.open(path)
     redact_document(doc)
     
-    name, extension = os.path.splitext(path)
-    doc.save(f"{name}_redacted.{extension}")
+    name, extension = os.path.splitext(current_filename)
+    output_filename = os.path.join(output_dir, f"{name}{filename_suffix}{extension}")
+    pathlib.Path(os.path.dirname(output_filename)).mkdir(parents=True, exist_ok=True)
+    doc.save(output_filename)
 
 def redact_document(doc:fitz.Document):
     fitz.TOOLS.set_small_glyph_heights(True)
@@ -86,4 +89,5 @@ def get_social_security_number_rect(page:fitz.Page):
 
     return rect
 
-main()
+if __name__ == "__main__":
+    main()
