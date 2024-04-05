@@ -39,7 +39,8 @@ def redact_document(doc:fitz.Document):
 
 def redact_page(page:fitz.Page):
     if is_unexpected_format(page):
-        redact_whole_page(page)
+        print(f"{current_filename}#{page.number+1} has an unexpected format, and will not be redacted")
+        # redact_whole_page(page)
     else:
         redact_social_security_number(page)
         redact_address(page)
@@ -51,9 +52,7 @@ def is_unexpected_format(page:fitz.Page):
     return not page.search_for(header_line)
 
 def redact_whole_page(page:fitz.Page):
-    print(f"{current_filename}#{page.number+1} has an unexpected format, and will not be redacted")
     page.add_redact_annot(page.mediabox)
-    return True
 
 def redact_address(page:fitz.Page):
     # This is kinda hard to detect programmatically,
