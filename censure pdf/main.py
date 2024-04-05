@@ -1,9 +1,32 @@
 import fitz
+import os
+import glob
+import sys
+
+current_filename = None
 
 def main():
-    doc = fitz.open('sample.pdf')
+    if (len(sys.argv) > 1):
+        patterns = sys.argv[1:]
+        for pattern in patterns:
+            redact_files(pattern)
+    else:
+        print("missing argument: which files would you like to redact ?")
+
+def redact_files(pattern:str):
+    files = glob.glob(pattern)
+    for file in files:
+        redact_file(file)
+
+def redact_file(path:str):
+    global current_filename
+    current_filename = os.path.basename(path)
+
+    doc = fitz.open(path)
     redact_document(doc)
-    doc.save("test.pdf")
+    
+    name, extension = os.path.splitext(path)
+    doc.save(f"{name}_redacted.{extension}")
 
 def redact_document(doc:fitz.Document):
     fitz.TOOLS.set_small_glyph_heights(True)
@@ -25,7 +48,7 @@ def is_unexpected_format(page:fitz.Page):
     return not page.search_for(header_line)
 
 def redact_whole_page(page:fitz.Page):
-    print(f"Page {page.number+1} has an unexpected format, and will be fully redacted")
+    print(f"{current_filename}#{page.number+1} has an unexpected format, and will not be redacted")
     page.add_redact_annot(page.mediabox)
     return True
 
@@ -51,9 +74,9 @@ def get_social_security_number_rect(page:fitz.Page):
     instances = page.search_for(search_text)
 
     if not instances:
-        raise Exception(f"Could not find SS number for page {page.number} (looking for: '{search_text}')")
+        raise Exception(f"{current_filename}#{page.number} Could not find SS number. (looking for: '{search_text}')")
     if len(instances) > 1:
-        raise Exception(f"Found multiple regions with text '{search_text}' on page {page.number}")
+        raise Exception(f"{current_filename}#{page.number} Found multiple regions with text '{search_text}' on page {page.number}")
 
     rect = instances[0]
 
